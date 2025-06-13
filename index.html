@@ -2,73 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Wake Up Voice Command</title>
+  <title>Wake-Up Voice Assistant</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       background-color: #121212;
       color: #00ffcc;
+      font-family: Arial, sans-serif;
       text-align: center;
       padding: 50px;
     }
+    h1 {
+      margin-bottom: 20px;
+    }
     #status {
       margin: 20px;
-      font-size: 24px;
+      font-size: 22px;
     }
     button {
       padding: 10px 20px;
       font-size: 18px;
-      background: #00ffcc;
+      background-color: #00ffcc;
       border: none;
       border-radius: 8px;
-      color: #121212;
       cursor: pointer;
+      color: #121212;
     }
   </style>
 </head>
 <body>
-  <h1>🎤 Voice Command Demo</h1>
-  <div id="status">Click "Start" and say "wake up"</div>
-  <button onclick="startWakeUp()">Start</button>
+  <h1>🎤 Voice Assistant with Wake Word</h1>
+  <div id="status">Status: Sleep Mode</div>
+  <button onclick="startListening()">Start Assistant</button>
 
   <script>
+    let mode = "sleep";
     let recognition;
-    let isListening = false;
 
-    function startWakeUp() {
+    function speak(text) {
+      const synth = window.speechSynthesis;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'en-US';
+      synth.speak(utter);
+    }
+
+    function startListening() {
       if (!('webkitSpeechRecognition' in window)) {
-        alert("Your browser doesn't support Speech Recognition");
+        alert("Browser doesn't support speech recognition");
         return;
       }
 
-      recognition = new webkitSpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      document.getElementById("status").innerText = "Listening for 'wake up'...";
-
-      recognition.onresult = function(event) {
-        let transcript = event.results[0][0].transcript.toLowerCase();
-        console.log("Heard:", transcript);
-
-        if (transcript.includes("wake up")) {
-          document.getElementById("status").innerText = "'Wake up' detected. Listening...";
-          listenContinuously();
-        } else {
-          document.getElementById("status").innerText = "Didn't hear 'wake up'. Try again.";
-        }
-      };
-
-      recognition.onerror = function(e) {
-        console.error("Error:", e.error);
-        document.getElementById("status").innerText = "Error: " + e.error;
-      };
-
-      recognition.start();
-    }
-
-    function listenContinuously() {
       recognition = new webkitSpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = false;
@@ -77,16 +59,30 @@
       recognition.onresult = function(event) {
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            let command = event.results[i][0].transcript.toLowerCase();
-            console.log("Command:", command);
-            document.getElementById("status").innerText = "Command: " + command;
+            let userSpeech = event.results[i][0].transcript.trim().toLowerCase();
+            console.log("Heard:", userSpeech);
+
+            if (mode === "sleep" && userSpeech.includes("wake up")) {
+              document.getElementById("status").innerText = "Status: Active Mode";
+              mode = "active";
+              speak("I am listening");
+            } else if (mode === "active") {
+              document.getElementById("status").innerText = "Status: Speaking → " + userSpeech;
+              speak(userSpeech);
+              mode = "sleep";
+              document.getElementById("status").innerText = "Status: Sleep Mode";
+            }
           }
         }
       };
 
-      recognition.onerror = function(e) {
-        console.error("Error:", e.error);
-        document.getElementById("status").innerText = "Error: " + e.error;
+      recognition.onerror = function(event) {
+        console.error("Speech error:", event.error);
+      };
+
+      recognition.onend = function() {
+        // Auto-restart listening when recognition ends
+        recognition.start();
       };
 
       recognition.start();
