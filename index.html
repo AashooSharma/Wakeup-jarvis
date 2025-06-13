@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
   <meta charset="UTF-8">
-  <title>Wake-Up Voice Assistant</title>
+  <title>Hotword Voice Assistant</title>
   <style>
     body {
       background-color: #121212;
@@ -31,13 +30,16 @@
   </style>
 </head>
 <body>
-  <h1>🎤 Voice Assistant with Wake Word</h1>
+  <h1>🎤 Voice Assistant with Multiple Hotwords</h1>
   <div id="status">Status: Sleep Mode</div>
   <button onclick="startListening()">Start Assistant</button>
 
   <script>
     let mode = "sleep";
     let recognition;
+
+    // ✅ You can add or remove hotwords here
+    const hotwords = ["wake up", "hello assistant", "jarvis", "ayushi", "hey buddy","doctor"];
 
     function speak(text) {
       const synth = window.speechSynthesis;
@@ -63,7 +65,7 @@
             let userSpeech = event.results[i][0].transcript.trim().toLowerCase();
             console.log("Heard:", userSpeech);
 
-            if (mode === "sleep" && userSpeech.includes("wake up")) {
+            if (mode === "sleep" && hotwords.some(word => userSpeech.includes(word))) {
               document.getElementById("status").innerText = "Status: Active Mode";
               mode = "active";
               speak("I am listening");
@@ -82,7 +84,7 @@
       };
 
       recognition.onend = function() {
-        // Auto-restart listening when recognition ends
+        // Restart listening automatically
         recognition.start();
       };
 
