@@ -78,7 +78,6 @@
       background-color: #00c2a8;
     }
 
-    /* Settings button */
     .settings-btn {
       position: absolute;
       top: 10px;
@@ -111,7 +110,6 @@
     let recognition;
     let mode = "sleep";
 
-    // Get current DB URL from localStorage or use default
     function getDBUrl() {
       return localStorage.getItem("replyDB") || defaultURL;
     }
@@ -147,7 +145,15 @@
       try {
         const res = await fetch(getDBUrl());
         const data = await res.json();
-        return data[command.toLowerCase()] || "Sorry, I don’t understand that.";
+
+        if (!data.responses || !Array.isArray(data.responses)) {
+          return "Invalid database structure.";
+        }
+
+        const found = data.responses.find(
+          item => item.input.toLowerCase() === command.toLowerCase()
+        );
+        return found ? found.reply : "Sorry, I don’t understand that.";
       } catch (err) {
         return "Error fetching reply.";
       }
