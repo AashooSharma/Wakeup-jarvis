@@ -2,90 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Hotword Voice Assistant</title>
+  <title>Wakeup Jarvis Assistant</title>
   <style>
     body {
-      background-color: #121212;
-      color: #00ffcc;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
+      background-color: #1e1e1e;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
     }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+
     h1 {
+      text-align: center;
+      color: #00ffd5;
+    }
+
+    #chat {
+      background: #121212;
+      border-radius: 10px;
+      padding: 20px;
+      height: 60vh;
+      overflow-y: auto;
       margin-bottom: 20px;
     }
-    #status {
-      margin: 20px;
-      font-size: 22px;
+
+    .user-msg, .bot-msg {
+      margin: 10px 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      display: inline-block;
+      max-width: 80%;
     }
-    button {
-      padding: 10px 20px;
+
+    .user-msg {
+      background-color: #0066ff;
+      color: white;
+      float: right;
+      clear: both;
+    }
+
+    .bot-msg {
+      background-color: #222;
+      color: #00ffd5;
+      float: left;
+      clear: both;
+    }
+
+    #status {
+      text-align: center;
+      margin-top: 20px;
       font-size: 18px;
-      background-color: #00ffcc;
+      color: #ccc;
+    }
+
+    button {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 30px;
+      background-color: #00ffd5;
+      color: #1e1e1e;
+      font-size: 16px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      color: #121212;
+    }
+
+    button:hover {
+      background-color: #00c2a8;
     }
   </style>
 </head>
 <body>
-  <h1>🎤 Voice Assistant with Multiple Hotwords</h1>
-  <div id="status">Status: Sleep Mode</div>
-  <button onclick="startListening()">Start Assistant</button>
+  <div class="container">
+    <h1>🎙️ Wakeup Jarvis</h1>
+    <div id="chat"></div>
+    <div id="status">Status: Sleep Mode</div>
+    <button onclick="startAssistant()">Start Assistant</button>
+  </div>
 
   <script>
-    let mode = "sleep";
+    const hotwords = ["wake up", "jarvis", "hello assistant", "ayushi", "hey buddy"];
+    const stopwords = ["stop", "exit"];
+    const replyURL = "https://raw.githubusercontent.com/AashooSharma/My_reply_database/refs/heads/main/BigReplyDatabase.json";
     let recognition;
-
-    // ✅ You can add or remove hotwords here
-    const hotwords = ["wake up", "hello assistant", "jarvis", "ayushi", "hey buddy","doctor"];
+    let mode = "sleep";
 
     function speak(text) {
       const synth = window.speechSynthesis;
       const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = 'en-US';
+      utter.lang = "en-US";
       synth.speak(utter);
     }
 
-    function startListening() {
+    function addChat(message, isBot = false) {
+      const chatDiv = document.getElementById("chat");
+      const msg = document.createElement("div");
+      msg.className = isBot ? "bot-msg" : "user-msg";
+      msg.textContent = message;
+      chatDiv.appendChild(msg);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    async function getBotReply(command) {
+      try {
+        const res = await fetch(replyURL);
+        const data = await res.json();
+        return data[command.toLowerCase()] || "Sorry, I don’t understand that.";
+      } catch (err) {
+        return "Error fetching reply.";
+      }
+    }
+
+    function startAssistant() {
       if (!('webkitSpeechRecognition' in window)) {
-        alert("Browser doesn't support speech recognition");
+        alert("Web Speech API not supported");
         return;
       }
 
       recognition = new webkitSpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      recognition.lang = "en-US";
 
-      recognition.onresult = function(event) {
+      recognition.onresult = async function(event) {
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            let userSpeech = event.results[i][0].transcript.trim().toLowerCase();
-            console.log("Heard:", userSpeech);
+            const speech = event.results[i][0].transcript.trim().toLowerCase();
+            console.log("User:", speech);
+            addChat(speech, false);
 
-            if (mode === "sleep" && hotwords.some(word => userSpeech.includes(word))) {
-              document.getElementById("status").innerText = "Status: Active Mode";
+            if (mode === "sleep" && hotwords.some(word => speech.includes(word))) {
               mode = "active";
-              speak("I am listening");
+              document.getElementById("status").textContent = "Status: Active Mode";
+              speak("Yes, I am listening.");
+              addChat("Yes, I am listening.", true);
             } else if (mode === "active") {
-              document.getElementById("status").innerText = "Status: Speaking → " + userSpeech;
-              speak(userSpeech);
-              mode = "sleep";
-              document.getElementById("status").innerText = "Status: Sleep Mode";
+              if (stopwords.some(word => speech.includes(word))) {
+                mode = "stopped";
+                recognition.stop();
+                document.getElementById("status").textContent = "Status: Stopped ❌";
+                speak("Okay, assistant stopped.");
+                addChat("Okay, assistant stopped.", true);
+              } else {
+                const reply = await getBotReply(speech);
+                speak(reply);
+                addChat(reply, true);
+                mode = "sleep";
+                document.getElementById("status").textContent = "Status: Sleep Mode";
+              }
             }
           }
         }
       };
 
       recognition.onerror = function(event) {
-        console.error("Speech error:", event.error);
+        console.error("Recognition error:", event.error);
       };
 
       recognition.onend = function() {
-        // Restart listening automatically
-        recognition.start();
+        if (mode !== "stopped") recognition.start(); // Auto-restart unless manually stopped
       };
 
       recognition.start();
