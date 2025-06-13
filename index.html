@@ -16,6 +16,7 @@
       max-width: 600px;
       margin: auto;
       padding: 20px;
+      position: relative;
     }
 
     h1 {
@@ -76,10 +77,27 @@
     button:hover {
       background-color: #00c2a8;
     }
+
+    /* Settings button */
+    .settings-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      color: #00ffd5;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .settings-btn:hover {
+      color: #00c2a8;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <button class="settings-btn" onclick="changeDatabase()">⚙️</button>
     <h1>🎙️ Wakeup Jarvis</h1>
     <div id="chat"></div>
     <div id="status">Status: Sleep Mode</div>
@@ -89,9 +107,25 @@
   <script>
     const hotwords = ["wake up", "jarvis", "hello assistant", "ayushi", "hey buddy"];
     const stopwords = ["stop", "exit"];
-    const replyURL = "https://raw.githubusercontent.com/AashooSharma/My_reply_database/refs/heads/main/BigReplyDatabase.json";
+    const defaultURL = "https://raw.githubusercontent.com/AashooSharma/My_reply_database/refs/heads/main/BigReplyDatabase.json";
     let recognition;
     let mode = "sleep";
+
+    // Get current DB URL from localStorage or use default
+    function getDBUrl() {
+      return localStorage.getItem("replyDB") || defaultURL;
+    }
+
+    function changeDatabase() {
+      const newUrl = prompt("Enter new JSON database URL:", getDBUrl());
+      if (newUrl) {
+        localStorage.setItem("replyDB", newUrl.trim());
+        alert("✅ New database URL set!");
+      } else {
+        alert("⚠️ Using default database.");
+        localStorage.removeItem("replyDB");
+      }
+    }
 
     function speak(text) {
       const synth = window.speechSynthesis;
@@ -111,7 +145,7 @@
 
     async function getBotReply(command) {
       try {
-        const res = await fetch(replyURL);
+        const res = await fetch(getDBUrl());
         const data = await res.json();
         return data[command.toLowerCase()] || "Sorry, I don’t understand that.";
       } catch (err) {
@@ -166,7 +200,7 @@
       };
 
       recognition.onend = function() {
-        if (mode !== "stopped") recognition.start(); // Auto-restart unless manually stopped
+        if (mode !== "stopped") recognition.start();
       };
 
       recognition.start();
