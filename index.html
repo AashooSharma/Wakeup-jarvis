@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wake Up Voice Command</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #00ffcc;
+      text-align: center;
+      padding: 50px;
+    }
+    #status {
+      margin: 20px;
+      font-size: 24px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #00ffcc;
+      border: none;
+      border-radius: 8px;
+      color: #121212;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎤 Voice Command Demo</h1>
+  <div id="status">Click "Start" and say "wake up"</div>
+  <button onclick="startWakeUp()">Start</button>
+
+  <script>
+    let recognition;
+    let isListening = false;
+
+    function startWakeUp() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Your browser doesn't support Speech Recognition");
+        return;
+      }
+
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      document.getElementById("status").innerText = "Listening for 'wake up'...";
+
+      recognition.onresult = function(event) {
+        let transcript = event.results[0][0].transcript.toLowerCase();
+        console.log("Heard:", transcript);
+
+        if (transcript.includes("wake up")) {
+          document.getElementById("status").innerText = "'Wake up' detected. Listening...";
+          listenContinuously();
+        } else {
+          document.getElementById("status").innerText = "Didn't hear 'wake up'. Try again.";
+        }
+      };
+
+      recognition.onerror = function(e) {
+        console.error("Error:", e.error);
+        document.getElementById("status").innerText = "Error: " + e.error;
+      };
+
+      recognition.start();
+    }
+
+    function listenContinuously() {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = function(event) {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            let command = event.results[i][0].transcript.toLowerCase();
+            console.log("Command:", command);
+            document.getElementById("status").innerText = "Command: " + command;
+          }
+        }
+      };
+
+      recognition.onerror = function(e) {
+        console.error("Error:", e.error);
+        document.getElementById("status").innerText = "Error: " + e.error;
+      };
+
+      recognition.start();
+    }
+  </script>
+</body>
+</html>
